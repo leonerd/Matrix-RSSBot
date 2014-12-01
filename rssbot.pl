@@ -26,6 +26,7 @@ ref $loop eq "IO::Async::Loop::Poll" and
 GetOptions(
    'C|config=s' => \my $CONFIG,
    'n|no-send'  => \my $NO_SEND,
+   'no-commit'  => \my $NO_COMMIT,
 ) or exit 1;
 
 defined $CONFIG or die "Must supply --config\n";
@@ -114,6 +115,8 @@ sub fetch_feeds
             next if $select_item_by_guid->fetchrow_hashref;
 
             new_rss_item( $item, $channel, $url );
+
+            next if $NO_COMMIT;
 
             $insert_item->execute( $guid );
             $insert_item->finish;
