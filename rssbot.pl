@@ -9,6 +9,8 @@ use IO::Async::Loop;
 use IO::Async::Timer::Periodic;
 use Net::Async::HTTP;
 
+use Future::Utils qw( fmap_void );
+
 use DBI;
 
 STDOUT->binmode( ":encoding(UTF-8)" );
@@ -39,14 +41,13 @@ sub fetch_feeds
 {
    $select_feeds->execute();
 
-   my @f;
-
-   while( my $row = $select_feeds->fetchrow_hashref ) {
+   my $f = fmap_void {
+      my ( $row ) = @_;
       my $url = $row->{url};
 
       print STDERR "Fetching $url\n";
 
-      push @f, $rss_ua->GET( $url )->then( sub {
+      $rss_ua->GET( $url )->then( sub {
          my ( $response ) = @_;
          my $content = $response->decoded_content;
 
@@ -83,11 +84,17 @@ sub fetch_feeds
 
          Future->done;
       });
-   }
+   } generate => sub {
+      my $row = $select_feeds->fetchrow_hashref;
+      $row ? ( $row ) : (); # empty list on done
+   },
+     concurrent => 10;
 
-   $select_feeds->finish;
-
-   $rss_ua->adopt_future( Future->needs_all( @f ) );
+   return $rss_ua->adopt_future(
+      $f->on_done(
+         sub { $select_feeds->finish }
+      )
+   );
 }
 
 sub new_rss_item
