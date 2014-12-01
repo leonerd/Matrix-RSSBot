@@ -14,7 +14,10 @@
    id="RSSicon"
    viewBox="0 0 256 256"
    inkscape:version="0.48.5 r10040"
-   sodipodi:docname="rssbot.svg">
+   sodipodi:docname="rssbot.svg"
+   inkscape:export-filename="/home/leo/src/matrix/Matrix-RSSBot/rssbot.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90">
   <metadata
      id="metadata34">
     <rdf:RDF>
@@ -113,6 +116,16 @@
        y2="128.55667"
        gradientUnits="userSpaceOnUse" />
   </defs>
+  <rect
+     style="color:#000000;fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:6;marker:none;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+     id="rect3886"
+     width="105.22035"
+     height="103.05084"
+     x="10.576271"
+     y="12.203389"
+     transform="scale(2,2)"
+     rx="0"
+     ry="50.983047" />
   <g
      id="g3030"
      transform="matrix(0.41525424,0,0,0.41525424,33.084746,52.067797)">
