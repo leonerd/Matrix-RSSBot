@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 
+use Convert::Color;
 use DBI;
 use Future::Utils qw( fmap_void );
 use Getopt::Long;
@@ -154,7 +155,9 @@ sub new_rss_item
    my $message = String::Tagged->new
       ->append_tagged( $channel->{title}, italic => 1 )
       ->append       ( " posted a new article: " )
-      ->append_tagged( $item->{title} );
+      ->append       ( $item->{title} )
+      ->append       ( " " )
+      ->append_tagged( "( $item->{link} )", fg => Convert::Color->new( "rgb:0.5,0.5,0.5" ) );
 
    $select_rooms_by_feed->execute( $url );
    while( my $row = $select_rooms_by_feed->fetchrow_hashref ) {
