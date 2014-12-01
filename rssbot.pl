@@ -25,6 +25,7 @@ ref $loop eq "IO::Async::Loop::Poll" and
 
 GetOptions(
    'C|config=s' => \my $CONFIG,
+   'n|no-send'  => \my $NO_SEND,
 ) or exit 1;
 
 defined $CONFIG or die "Must supply --config\n";
@@ -155,6 +156,8 @@ sub new_rss_item
    $select_rooms_by_feed->execute( $url );
    while( my $row = $select_rooms_by_feed->fetchrow_hashref ) {
       my $roomname = $row->{room};
+
+      next if $NO_SEND;
 
       my $f = $matrix->join_room( $roomname )->then( sub {
          my ( $room ) = @_;
