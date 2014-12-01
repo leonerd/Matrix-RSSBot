@@ -152,9 +152,9 @@ sub new_rss_item
    print "New RSS item $item->{title} on channel $channel->{title}\n";
 
    my $message = String::Tagged->new
-      ->append_tagged( $channel->{title}, i => 1 )
+      ->append_tagged( $channel->{title}, italic => 1 )
       ->append       ( " posted a new article: " )
-      ->append       ( $item->{title} );
+      ->append_tagged( $item->{title} );
 
    $select_rooms_by_feed->execute( $url );
    while( my $row = $select_rooms_by_feed->fetchrow_hashref ) {
