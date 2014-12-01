@@ -3,19 +3,52 @@
 use strict;
 use warnings;
 
-use XML::RSS;
-
+use DBI;
+use Future::Utils qw( fmap_void );
+use Getopt::Long;
 use IO::Async::Loop;
 use IO::Async::Timer::Periodic;
+use IO::Socket::SSL qw(SSL_VERIFY_NONE);
 use Net::Async::HTTP;
-
-use Future::Utils qw( fmap_void );
-
-use DBI;
+use Net::Async::Matrix;
+use Net::Async::Matrix::Utils qw( build_formatted_message );
+use XML::RSS;
+use YAML;
 
 STDOUT->binmode( ":encoding(UTF-8)" );
 
 my $loop = IO::Async::Loop->new;
+
+ref $loop eq "IO::Async::Loop::Poll" and
+   warn "Using SSL with IO::Poll causes known memory-leaks!!\n";
+
+GetOptions(
+   'C|config=s' => \my $CONFIG,
+) or exit 1;
+
+defined $CONFIG or die "Must supply --config\n";
+
+my %CONFIG = %{ YAML::LoadFile( $CONFIG ) };
+
+my %MATRIX_CONFIG = %{ $CONFIG{matrix} };
+# No harm in always applying this
+$MATRIX_CONFIG{SSL_verify_mode} = SSL_VERIFY_NONE;
+
+my $matrix = Net::Async::Matrix->new(
+   %MATRIX_CONFIG,
+   on_error => sub {
+      my ( undef, $failure, $name, @args ) = @_;
+      print STDERR "Matrix failure: $failure\n";
+      if( defined $name and $name eq "http" ) {
+         my ($response, $request) = @args;
+         print STDERR "HTTP failure details:\n" .
+         "Requested URL: ${\$request->method} ${\$request->uri}\n" .
+         "Response ${\$response->status_line}\n";
+         print STDERR " | $_\n" for split m/\n/, $response->decoded_content;
+      }
+   },
+);
+$loop->add( $matrix );
 
 $loop->add( my $rss_ua = Net::Async::HTTP->new );
 
@@ -33,6 +66,10 @@ $loop->add( IO::Async::Timer::Periodic->new(
    interval => 10*60,
    on_tick => \&fetch_feeds,
 )->start );
+
+$matrix->login( %{ $CONFIG{"matrix-bot"} } )->then( sub {
+   $matrix->start;
+})->get;
 
 $loop->run;
 
