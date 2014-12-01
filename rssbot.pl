@@ -12,6 +12,7 @@ use IO::Socket::SSL qw(SSL_VERIFY_NONE);
 use Net::Async::HTTP;
 use Net::Async::Matrix;
 use Net::Async::Matrix::Utils qw( build_formatted_message );
+use String::Tagged;
 use XML::RSS;
 use YAML;
 
@@ -61,15 +62,21 @@ my $update_feed  = $dbh->prepare( "UPDATE feeds SET title = ? WHERE url = ?" );
 my $select_item_by_guid = $dbh->prepare( "SELECT guid FROM items WHERE guid = ?" );
 my $insert_item         = $dbh->prepare( "INSERT INTO items ( guid ) VALUES ( ? )" );
 
-$loop->add( IO::Async::Timer::Periodic->new(
+my $select_rooms_by_feed = $dbh->prepare( "SELECT room FROM feed_room WHERE url = ?" );
+
+$loop->add( my $timer = IO::Async::Timer::Periodic->new(
    first_interval => 0,
    interval => 10*60,
    on_tick => \&fetch_feeds,
-)->start );
+) );
 
 $matrix->login( %{ $CONFIG{"matrix-bot"} } )->then( sub {
    $matrix->start;
 })->get;
+
+print "Logged in to Matrix...\n";
+
+$timer->start;
 
 $loop->run;
 
@@ -105,7 +112,7 @@ sub fetch_feeds
             $select_item_by_guid->execute( $guid );
             next if $select_item_by_guid->fetchrow_hashref;
 
-            new_rss_item( $item, $channel );
+            new_rss_item( $item, $channel, $url );
 
             $insert_item->execute( $guid );
             $insert_item->finish;
@@ -136,7 +143,28 @@ sub fetch_feeds
 
 sub new_rss_item
 {
-   my ( $item, $channel ) = @_;
+   my ( $item, $channel, $url ) = @_;
 
    print "New RSS item $item->{title} on channel $channel->{title}\n";
+
+   my $message = String::Tagged->new
+      ->append_tagged( $channel->{title}, i => 1 )
+      ->append       ( " posted a new article: " )
+      ->append       ( $item->{title} );
+
+   $select_rooms_by_feed->execute( $url );
+   while( my $row = $select_rooms_by_feed->fetchrow_hashref ) {
+      my $roomname = $row->{room};
+
+      my $f = $matrix->join_room( $roomname )->then( sub {
+         my ( $room ) = @_;
+
+         $room->send_message(
+            type => "m.text",
+            %{ build_formatted_message( $message ) },
+         )
+      });
+
+      $matrix->adopt_future( $f );
+   }
 }
