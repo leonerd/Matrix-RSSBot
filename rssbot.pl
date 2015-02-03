@@ -11,7 +11,7 @@ use IO::Async::Loop;
 use IO::Async::Timer::Periodic;
 use IO::Socket::SSL qw(SSL_VERIFY_NONE);
 use Net::Async::HTTP;
-use Net::Async::Matrix;
+use Net::Async::Matrix 0.15;
 use Net::Async::Matrix::Utils qw( build_formatted_message );
 use String::Tagged;
 use XML::RSS;
@@ -51,6 +51,7 @@ my $matrix = Net::Async::Matrix->new(
          print STDERR " | $_\n" for split m/\n/, $response->decoded_content;
       }
    },
+   enable_events => 0,
 );
 $loop->add( $matrix );
 
