@@ -170,7 +170,7 @@ sub new_rss_item
          my ( $room ) = @_;
 
          $room->send_message(
-            type => "m.text",
+            type => "m.notice",
             %{ build_formatted_message( $message ) },
          )
       });
